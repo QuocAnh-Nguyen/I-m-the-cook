@@ -1,0 +1,177 @@
+// Prisma schema for ChefOne application
+// SQLite database with all models (swap provider for PostgreSQL in production)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  avatarUrl     String?
+  calorieGoal   Int      @default(2000)
+  proteinGoal   Int      @default(150)
+  carbsGoal     Int      @default(250)
+  fatGoal       Int      @default(65)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  recipes           Recipe[]
+  pantryItems       PantryItem[]
+  mealSlots         MealSlot[]
+  calorieEntries    CalorieEntry[]
+  shoppingItems     ShoppingItem[]
+  generationHistory GenerationHistory[]
+
+  @@map("users")
+}
+
+// ─── RECIPES ──────────────────────────────────────────────────────
+
+model Recipe {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  prepTime    String            // "10 min"
+  cookTime    String            // "25 min"
+  servings    Int
+  difficulty  String            @default("Easy") // Easy | Medium | Hard
+  calories    Int               // per serving
+  protein     Int               // grams per serving
+  carbs       Int
+  fat         Int
+  fiber       Int               @default(0)
+  tags        String            @default("[]")   // JSON array string for SQLite compat
+  ingredients String            // JSON Array<{ amount, unit, name }>
+  steps       String            @default("[]")   // JSON array string for SQLite compat
+  notes       String?           // User personal note
+  source      String            @default("MANUAL") // MANUAL | AI_GENERATED | IMPORTED
+  isFavorite  Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealSlots   MealSlot[]
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@map("recipes")
+}
+
+// ─── GENERATION HISTORY ───────────────────────────────────────────
+
+model GenerationHistory {
+  id            String         @id @default(uuid())
+  userId        String
+  prompt        String              // Text description or ingredient list
+  imageUrl      String?             // Uploaded image path (scanner)
+  filters       String?             // JSON { mealType, appliance, cookTime, skill, chefMode }
+  resultName    String              // Generated recipe name
+  resultData    String              // Full recipe JSON snapshot
+  status        String             @default("GENERATED") // GENERATED | SAVED | DISCARDED
+  savedRecipeId String?             // FK to Recipe if user saved it
+  createdAt     DateTime            @default(now())
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("generation_history")
+}
+
+// ─── PANTRY ───────────────────────────────────────────────────────
+
+model PantryItem {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  category  String            // Proteins | Vegetables | Fruits | Dairy | Grains | OilsAndCondiments | Spices | Other
+  quantity  Float
+  unit      String            // "g", "kg", "ml", "L", "pieces", etc.
+  expiry    DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, category])
+  @@index([userId, expiry])
+  @@map("pantry_items")
+}
+
+// ─── MEAL PLANNER ─────────────────────────────────────────────────
+
+model MealSlot {
+  id         String   @id @default(uuid())
+  userId     String
+  weekStart  DateTime          // Monday of the week (ISO date, time=00:00)
+  day        String            // Mon | Tue | Wed | Thu | Fri | Sat | Sun
+  mealType   String            // Breakfast | Lunch | Dinner | Snack
+  recipeId   String?           // nullable if manual entry (e.g., from calorie tracker sync)
+  customName String?           // for non-recipe meals
+  calories   Int
+  synced     Boolean           @default(false) // true if auto-synced from calorie tracker
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe     Recipe?           @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, weekStart, day, mealType])
+  @@index([userId, weekStart])
+  @@map("meal_slots")
+}
+
+// ─── CALORIE TRACKER ──────────────────────────────────────────────
+
+model CalorieEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  date      String            // ISO date string YYYY-MM-DD (no time)
+  mealType  String            // Breakfast | Lunch | Dinner | Snack
+  foodName  String
+  quantity  Float
+  unit      String            // "serving", "g", "pieces", etc.
+  calories  Int
+  protein   Float             @default(0)
+  carbs     Float             @default(0)
+  fat       Float             @default(0)
+  fromPhoto Boolean           @default(false)
+  imageUrl  String?           // Path to uploaded food photo
+  createdAt DateTime          @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@index([userId, date, mealType])
+  @@map("calorie_entries")
+}
+
+// ─── SHOPPING LIST ────────────────────────────────────────────────
+
+model ShoppingItem {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  category  String            // Produce | Dairy | Proteins | Pantry | Other
+  quantity  String?           // Optional: "500g", "2 pieces"
+  checked   Boolean           @default(false)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, category])
+  @@map("shopping_items")
+}

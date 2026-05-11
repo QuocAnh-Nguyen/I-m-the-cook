@@ -1,33 +1,23 @@
-import React, { Component } from 'react';
-import Chart from 'react-apexcharts';
+/**
+ * BarChart — Functional component (refactored from class component)
+ * 
+ * Now reactive: re-renders when chartData or chartOptions change.
+ * This is critical for Phase 2.F (Calorie Tracker → Nutrition Analytics)
+ * where logging food must immediately update the charts.
+ */
+import React from "react";
+import Chart from "react-apexcharts";
 
-class BarChart extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      chartData: [],
-      chartOptions: {},
-    };
-  }
-
-  componentDidMount() {
-    this.setState({
-      chartData: this.props.chartData,
-      chartOptions: this.props.chartOptions,
-    });
-  }
-
-  render() {
-    return (
-      <Chart
-        options={this.state.chartOptions}
-        series={this.state.chartData}
-        type="bar"
-        width="100%"
-        height="100%"
-      />
-    );
-  }
-}
+const BarChart = ({ chartData, chartOptions }) => {
+  return (
+    <Chart
+      options={chartOptions}
+      series={chartData}
+      type="bar"
+      width="100%"
+      height="100%"
+    />
+  );
+};
 
 export default BarChart;

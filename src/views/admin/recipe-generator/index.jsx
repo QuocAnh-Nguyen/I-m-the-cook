@@ -1,6 +1,26 @@
+/**
+ * ============================================================================
+ * AI Recipe Generator — Connected to Global Store
+ * ============================================================================
+ *
+ * Phase 2.A: Pantry Manager → AI Recipe Generator
+ *   - Step 1 "Ingredients" auto-extracts available items from the Pantry
+ *   - Prioritizes items nearing expiration (sorted by expiry date)
+ *   - Shows "From Your Pantry" section with expiry-sorted ingredients
+ *
+ * Phase 2.B: AI Recipe Generator → My Recipes
+ *   - "Save Recipe" pushes the generated recipe to the global store
+ *   - Auto-assigns "AI Generated" source badge
+ *   - Recipe appears immediately in My Recipes page
+ *
+ * State: Uses Zustand store for pantry items and recipe saving.
+ * ============================================================================
+ */
+
 import React, { useState } from "react";
 import Card from "components/card";
 import RecipeResultCard from "./components/RecipeResultCard";
+import useAppStore from "store/useAppStore";
 import { mockRecipeResult } from "./variables/mockData";
 import {
   MdOutlineAutoAwesome,
@@ -9,6 +29,8 @@ import {
   MdOutlineCheck,
   MdClose,
   MdOutlineAdd,
+  MdOutlineInventory2,
+  MdOutlineWarning,
 } from "react-icons/md";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -52,69 +74,147 @@ const CHEF_MODES = [
 
 const TOTAL_STEPS = 7;
 
-// ─── Step Components ──────────────────────────────────────────────────────────
+// ─── Expiry helpers ────────────────────────────────────────────────────────
+const isExpiringSoon = (expiryDate) => {
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+  return diffDays <= 3 && diffDays >= 0;
+};
 
-const StepIngredients = ({ selected, onToggle, customInput, setCustomInput, onAddCustom }) => (
-  <div>
-    <h2 className="text-lg font-bold text-navy-700 dark:text-white">
-      Step 1: Add the ingredients you have at home
-    </h2>
-    <p className="mt-1 mb-5 text-sm text-gray-500 dark:text-gray-400">
-      You can pick ingredients from the list or from your saved inventory.
-    </p>
+const getDaysUntilExpiry = (expiryDate) => {
+  const today = new Date();
+  const expiry = new Date(expiryDate);
+  return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+};
 
-    {/* Custom ingredient input */}
-    <div className="mb-4 flex gap-2">
-      <input
-        type="text"
-        value={customInput}
-        onChange={(e) => setCustomInput(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && onAddCustom()}
-        placeholder="Add custom ingredient..."
-        className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/10 dark:bg-navy-700 dark:text-white"
-      />
-      <button
-        onClick={onAddCustom}
-        className="flex items-center gap-1 rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
-      >
-        <MdOutlineAdd className="h-4 w-4" />
-        Add
-      </button>
-    </div>
+// ─── Step Components ──────────────────────────────────────────────────────
 
-    {/* Selected tags */}
-    {selected.length > 0 && (
-      <div className="mb-3 flex flex-wrap gap-2">
-        {selected.map((ing) => (
+/**
+ * Phase 2.A: Enhanced Step 1 with Pantry Integration
+ * Shows pantry items sorted by expiry date (soonest first) so users
+ * prioritize ingredients that are about to expire.
+ */
+const StepIngredients = ({
+  selected,
+  onToggle,
+  customInput,
+  setCustomInput,
+  onAddCustom,
+  pantryItems,
+}) => {
+  // Sort pantry items by expiry (soonest first) to prevent food waste
+  const sortedPantry = [...pantryItems].sort(
+    (a, b) => new Date(a.expiry) - new Date(b.expiry)
+  );
+
+  return (
+    <div>
+      <h2 className="text-lg font-bold text-navy-700 dark:text-white">
+        Step 1: Add the ingredients you have at home
+      </h2>
+      <p className="mt-1 mb-5 text-sm text-gray-500 dark:text-gray-400">
+        Select from your pantry (prioritized by expiry) or add custom ingredients.
+      </p>
+
+      {/* Custom ingredient input */}
+      <div className="mb-4 flex gap-2">
+        <input
+          type="text"
+          value={customInput}
+          onChange={(e) => setCustomInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && onAddCustom()}
+          placeholder="Add custom ingredient..."
+          className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-white/10 dark:bg-navy-700 dark:text-white"
+        />
+        <button
+          onClick={onAddCustom}
+          className="flex items-center gap-1 rounded-xl bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+        >
+          <MdOutlineAdd className="h-4 w-4" />
+          Add
+        </button>
+      </div>
+
+      {/* Selected tags */}
+      {selected.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {selected.map((ing) => (
+            <button
+              key={ing}
+              onClick={() => onToggle(ing)}
+              className="flex items-center gap-1 rounded-full bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white"
+            >
+              {ing}
+              <MdClose className="h-3.5 w-3.5" />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Phase 2.A: Pantry Items — sorted by expiry, expiring items highlighted */}
+      {sortedPantry.length > 0 && (
+        <div className="mb-5">
+          <div className="mb-2 flex items-center gap-2">
+            <MdOutlineInventory2 className="h-4 w-4 text-brand-500" />
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">
+              From Your Pantry
+            </p>
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-500">
+              {sortedPantry.length} items
+            </span>
+          </div>
+          <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+            Items expiring soon are highlighted — use them first to reduce waste!
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {sortedPantry
+              .filter((item) => !selected.includes(item.name))
+              .map((item) => {
+                const daysLeft = getDaysUntilExpiry(item.expiry);
+                const expiring = isExpiringSoon(item.expiry);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onToggle(item.name)}
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 ${
+                      expiring
+                        ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-900/20 dark:text-amber-400"
+                        : "border-gray-200 bg-gray-50 text-gray-700 dark:border-white/10 dark:bg-navy-700 dark:text-white"
+                    }`}
+                  >
+                    {item.name}
+                    {expiring && (
+                      <span className="flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-600 dark:bg-amber-900/40">
+                        <MdOutlineWarning className="h-3 w-3" />
+                        {daysLeft}d
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Common ingredients */}
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+        Common Ingredients
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {COMMON_INGREDIENTS.filter((i) => !selected.includes(i)).map((ing) => (
           <button
             key={ing}
             onClick={() => onToggle(ing)}
-            className="flex items-center gap-1 rounded-full bg-brand-500 px-3 py-1.5 text-sm font-semibold text-white"
+            className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 dark:border-white/10 dark:bg-navy-700 dark:text-white"
           >
             {ing}
-            <MdClose className="h-3.5 w-3.5" />
           </button>
         ))}
       </div>
-    )}
-
-    {/* Common ingredients */}
-    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
-      Common Ingredients
-    </p>
-    <div className="flex flex-wrap gap-2">
-      {COMMON_INGREDIENTS.filter((i) => !selected.includes(i)).map((ing) => (
-        <button
-          key={ing}
-          onClick={() => onToggle(ing)}
-          className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 dark:border-white/10 dark:bg-navy-700 dark:text-white"
-        >
-          {ing}
-        </button>
-      ))}
     </div>
-  </div>
-);
+  );
+};
 
 const StepMealType = ({ selected, onSelect }) => (
   <div>
@@ -378,13 +478,19 @@ const StepGenerate = ({ wizard, isLoading, onGenerate }) => (
   </div>
 );
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────
 
 const RecipeGenerator = () => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [recipe, setRecipe] = useState(null);
   const [customIngInput, setCustomIngInput] = useState("");
+
+  // Phase 2.A: Read pantry items from global store
+  const pantryItems = useAppStore((s) => s.pantryItems);
+
+  // Phase 2.B: Save AI recipe to global store → My Recipes
+  const saveAIRecipe = useAppStore((s) => s.saveAIRecipe);
 
   const [wizard, setWizard] = useState({
     ingredients: [],
@@ -432,6 +538,14 @@ const RecipeGenerator = () => {
     }, 2000);
   };
 
+  /**
+   * Phase 2.B: Save generated recipe to My Recipes via global store.
+   * The store's saveAIRecipe() auto-assigns "AI Generated" badge.
+   */
+  const handleSaveToMyRecipes = (generatedRecipe) => {
+    saveAIRecipe(generatedRecipe);
+  };
+
   const handleReset = () => {
     setStep(1);
     setRecipe(null);
@@ -456,7 +570,6 @@ const RecipeGenerator = () => {
     <div>
       {/* Progress Bar */}
       <div className="mt-3 mb-6">
-        {/* Step indicators */}
         <div className="mb-3 flex items-center justify-between">
           {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((n) => (
             <div key={n} className="flex flex-1 flex-col items-center">
@@ -484,7 +597,6 @@ const RecipeGenerator = () => {
             </div>
           ))}
         </div>
-        {/* Progress line */}
         <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-navy-700">
           <div
             className="h-1.5 rounded-full bg-brand-500 transition-all duration-500"
@@ -507,12 +619,10 @@ const RecipeGenerator = () => {
               Start Over
             </button>
           </div>
+          {/* Phase 2.B: Pass saveAIRecipe handler to RecipeResultCard */}
           <RecipeResultCard
             recipe={recipe}
-            onSaveToMyRecipes={(r) => {
-              // Recipe saved confirmation — RecipeResultCard handles its own saved state
-              console.log("Saved to My Recipes:", r.name);
-            }}
+            onSaveToMyRecipes={handleSaveToMyRecipes}
           />
         </div>
       )}
@@ -527,6 +637,7 @@ const RecipeGenerator = () => {
               customInput={customIngInput}
               setCustomInput={setCustomIngInput}
               onAddCustom={addCustomIngredient}
+              pantryItems={pantryItems}
             />
           )}
           {step === 2 && (
@@ -621,7 +732,7 @@ const RecipeGenerator = () => {
         </Card>
       )}
 
-      {/* Loading overlay when generating */}
+      {/* Loading overlay */}
       {isLoading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="flex flex-col items-center rounded-2xl bg-white p-10 shadow-2xl dark:bg-navy-800">

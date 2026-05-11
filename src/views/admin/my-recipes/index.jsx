@@ -1,5 +1,19 @@
+/**
+ * ============================================================================
+ * My Recipes — Connected to Global Store
+ * ============================================================================
+ *
+ * Phase 2.B: AI Recipe Generator pushes recipes here with "AI Generated" badge
+ * Phase 2.C: Meal Planner reads from this recipe list for its picker modal
+ * Phase 2.G: Recipe count feeds Dashboard stats
+ *
+ * State: Uses Zustand store for recipes instead of local state.
+ * ============================================================================
+ */
+
 import React, { useState } from "react";
 import Card from "components/card";
+import useAppStore from "store/useAppStore";
 import {
   MdOutlineMenuBook,
   MdOutlineAdd,
@@ -7,65 +21,12 @@ import {
   MdOutlineDelete,
   MdOutlineSave,
   MdClose,
-  MdOutlineBookmark,
   MdOutlineTimer,
   MdOutlinePeople,
   MdOutlineLocalFireDepartment,
   MdOutlineSearch,
+  MdOutlineAutoAwesome,
 } from "react-icons/md";
-
-const initialRecipes = [
-  {
-    id: 1,
-    name: "Creamy Tuscan Chicken",
-    prepTime: "10 min",
-    cookTime: "25 min",
-    servings: 4,
-    difficulty: "Easy",
-    calories: 520,
-    protein: 42,
-    carbs: 18,
-    fat: 30,
-    tags: ["Italian", "High Protein", "Creamy"],
-    notes: "Family favourite. Add extra spinach for more greens.",
-    source: "AI Generated",
-    savedAt: "2026-05-10",
-  },
-  {
-    id: 2,
-    name: "Avocado Shrimp Tacos",
-    prepTime: "15 min",
-    cookTime: "10 min",
-    servings: 2,
-    difficulty: "Easy",
-    calories: 380,
-    protein: 28,
-    carbs: 32,
-    fat: 16,
-    tags: ["Mexican", "Seafood", "Fresh"],
-    notes: "Great for summer. Use corn tortillas for GF option.",
-    source: "AI Generated",
-    savedAt: "2026-05-09",
-  },
-  {
-    id: 3,
-    name: "Lemon Herb Salmon",
-    prepTime: "10 min",
-    cookTime: "20 min",
-    servings: 2,
-    difficulty: "Medium",
-    calories: 460,
-    protein: 38,
-    carbs: 8,
-    fat: 28,
-    tags: ["Seafood", "Keto", "Healthy"],
-    notes: "Best with asparagus on the side.",
-    source: "Manual",
-    savedAt: "2026-05-08",
-  },
-];
-
-let nextRecipeId = 4;
 
 const EMPTY_FORM = {
   name: "",
@@ -93,7 +54,12 @@ const sourceColor = {
 };
 
 const MyRecipes = () => {
-  const [recipes, setRecipes] = useState(initialRecipes);
+  // ─── Read from global Zustand store ──────────────────────────────────────
+  const recipes = useAppStore((s) => s.recipes);
+  const addRecipe = useAppStore((s) => s.addRecipe);
+  const updateRecipe = useAppStore((s) => s.updateRecipe);
+  const removeRecipe = useAppStore((s) => s.removeRecipe);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editRecipe, setEditRecipe] = useState(null);
@@ -134,7 +100,7 @@ const MyRecipes = () => {
   };
 
   const handleDelete = (id) => {
-    setRecipes((prev) => prev.filter((r) => r.id !== id));
+    removeRecipe(id);
     if (viewRecipe?.id === id) setViewRecipe(null);
   };
 
@@ -172,15 +138,12 @@ const MyRecipes = () => {
     };
 
     if (editRecipe) {
-      setRecipes((prev) =>
-        prev.map((r) => (r.id === editRecipe.id ? { ...r, ...parsed } : r))
-      );
+      updateRecipe(editRecipe.id, parsed);
       if (viewRecipe?.id === editRecipe.id) {
         setViewRecipe((prev) => ({ ...prev, ...parsed }));
       }
     } else {
-      const newRecipe = { id: nextRecipeId++, ...parsed };
-      setRecipes((prev) => [newRecipe, ...prev]);
+      addRecipe(parsed);
     }
     setModalOpen(false);
   };
@@ -243,7 +206,7 @@ const MyRecipes = () => {
         </Card>
         <Card extra="!flex-row items-center rounded-[20px] p-4">
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-green-50 dark:bg-navy-700">
-            <MdOutlineBookmark className="h-6 w-6 text-green-500" />
+            <MdOutlineAutoAwesome className="h-6 w-6 text-green-500" />
           </div>
           <div className="ml-3">
             <p className="text-xs font-medium text-gray-500">AI Generated</p>
@@ -329,9 +292,10 @@ const MyRecipes = () => {
                           </span>
                           <span
                             className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              sourceColor[recipe.source]
+                              sourceColor[recipe.source] || "bg-gray-100 text-gray-600"
                             }`}
                           >
+                            {recipe.source === "AI Generated" && "✨ "}
                             {recipe.source}
                           </span>
                         </div>
@@ -407,6 +371,16 @@ const MyRecipes = () => {
                   <MdClose className="h-4 w-4 text-gray-500" />
                 </button>
               </div>
+
+              {/* AI Generated badge */}
+              {viewRecipe.source === "AI Generated" && (
+                <div className="mb-3 flex items-center gap-1.5 rounded-xl bg-brand-50 px-3 py-1.5 dark:bg-brand-900/20">
+                  <MdOutlineAutoAwesome className="h-4 w-4 text-brand-500" />
+                  <span className="text-xs font-semibold text-brand-600">
+                    AI Generated Recipe
+                  </span>
+                </div>
+              )}
 
               <div className="mb-3 grid grid-cols-2 gap-2">
                 {[

@@ -1,0 +1,30 @@
+# Database
+*.db
+*.db-journal
+
+# Prisma generated migrations (keep in git for collaboration)
+# prisma/migrations/
+
+# Uploaded images
+uploads/
+
+# Environment files (keep .env.example)
+.env
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Test coverage
+coverage/

@@ -5,8 +5,7 @@ import Dashboard from "views/admin/default";
 import RecipeGenerator from "views/admin/recipe-generator";
 import PantryManager from "views/admin/pantry";
 import MealPlanner from "views/admin/meal-planner";
-import NutritionAnalytics from "views/admin/nutrition";
-import CalorieTracker from "views/admin/calorie-tracker";
+import NutritionTracking from "views/admin/nutrition-tracking";
 import MyRecipes from "views/admin/my-recipes";
 import ProfileOverview from "views/admin/profile";
 
@@ -16,12 +15,18 @@ import {
   MdOutlineMenuBook,
   MdOutlineInventory2,
   MdOutlineCalendarMonth,
-  MdOutlineBarChart,
   MdOutlineLocalFireDepartment,
   MdOutlineBookmark,
   MdOutlineSettings,
 } from "react-icons/md";
 
+/**
+ * Route Configuration
+ *
+ * Phase 1.3: Calorie Tracker and Nutrition Analytics have been merged
+ * into a single "Nutrition & Tracking" page with a tabbed interface.
+ * The old separate routes (/calorie-tracker and /nutrition) are removed.
+ */
 const routes = [
   {
     name: "Dashboard",
@@ -59,18 +64,11 @@ const routes = [
     component: <MealPlanner />,
   },
   {
-    name: "Calorie Tracker",
+    name: "Nutrition & Tracking",
     layout: "/admin",
-    path: "calorie-tracker",
+    path: "nutrition-tracking",
     icon: <MdOutlineLocalFireDepartment className="h-6 w-6" />,
-    component: <CalorieTracker />,
-  },
-  {
-    name: "Nutrition Analytics",
-    layout: "/admin",
-    path: "nutrition",
-    icon: <MdOutlineBarChart className="h-6 w-6" />,
-    component: <NutritionAnalytics />,
+    component: <NutritionTracking />,
   },
   {
     name: "Profile Settings",

@@ -1,7 +1,21 @@
+/**
+ * ============================================================================
+ * Pantry Manager — Connected to Global Store
+ * ============================================================================
+ *
+ * Phase 2.A: Pantry items are read by AI Recipe Generator
+ * Phase 2.D: Pantry inventory is cross-referenced for grocery list diffing
+ * Phase 2.G: Pantry count feeds Dashboard stats & alerts
+ *
+ * State: Uses Zustand store instead of local useState for items.
+ * ============================================================================
+ */
+
 import React, { useState, useMemo, useRef } from "react";
 import Card from "components/card";
 import AddIngredientModal from "./components/AddIngredientModal";
-import { initialPantryItems, categories } from "./variables/mockData";
+import useAppStore from "store/useAppStore";
+import { categories } from "./variables/mockData";
 import {
   MdOutlineAdd,
   MdOutlineEdit,
@@ -15,6 +29,7 @@ import {
   MdOutlineImage,
 } from "react-icons/md";
 
+// ─── Expiry helpers ────────────────────────────────────────────────────────
 const isExpiringSoon = (expiryDate) => {
   const today = new Date();
   const expiry = new Date(expiryDate);
@@ -37,29 +52,7 @@ const categoryColors = {
   Other: "bg-gray-100 text-gray-600",
 };
 
-// Mock AI shopping suggestions based on pantry
-const generateShoppingSuggestions = (items) => {
-  const pantryNames = items.map((i) => i.name.toLowerCase());
-  const allSuggestions = [
-    { name: "Greek Yogurt", reason: "Great for breakfast & protein goals", category: "Dairy", priority: "High" },
-    { name: "Salmon Fillets", reason: "Omega-3 rich — aligns with your health goals", category: "Proteins", priority: "High" },
-    { name: "Quinoa", reason: "Complete protein grain you're running low on", category: "Grains", priority: "Medium" },
-    { name: "Avocados", reason: "Healthy fats, popular in your recent recipes", category: "Fruits", priority: "High" },
-    { name: "Sweet Potatoes", reason: "Complex carbs for sustained energy", category: "Vegetables", priority: "Medium" },
-    { name: "Broccoli", reason: "High fibre vegetable for weekly meal variety", category: "Vegetables", priority: "Medium" },
-    { name: "Almond Milk", reason: "Dairy alternative based on dietary preferences", category: "Dairy", priority: "Low" },
-    { name: "Blueberries", reason: "Antioxidant-rich snack option", category: "Fruits", priority: "Low" },
-    { name: "Chickpeas", reason: "Plant protein to diversify your meals", category: "Proteins", priority: "Medium" },
-    { name: "Whole Grain Bread", reason: "Stock up for quick breakfast and snacks", category: "Grains", priority: "High" },
-  ];
-  return allSuggestions.filter(
-    (s) => !pantryNames.some((p) => p.includes(s.name.toLowerCase().split(" ")[0]))
-  );
-};
-
-let nextId = 13;
-
-// Pantry Image Upload Zone Component
+// ─── Pantry Image Upload Zone Component ────────────────────────────────────
 const PantryImageUploadZone = ({ onItemsDetected }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -74,10 +67,8 @@ const PantryImageUploadZone = ({ onItemsDetected }) => {
     reader.onload = (e) => {
       setPreview(e.target.result);
       setIsAnalyzing(true);
-      // Simulate AI analysis
       setTimeout(() => {
         setIsAnalyzing(false);
-        // Mock detected items from receipt/ingredients photo
         onItemsDetected([
           { name: "Orange Juice", category: "Fruits", quantity: 1, unit: "L", expiry: "2026-05-20" },
           { name: "Cheddar Cheese", category: "Dairy", quantity: 200, unit: "g", expiry: "2026-05-25" },
@@ -158,12 +149,22 @@ const PantryImageUploadZone = ({ onItemsDetected }) => {
 };
 
 const PantryManager = () => {
-  const [items, setItems] = useState(initialPantryItems);
+  // ─── Read from global Zustand store ──────────────────────────────────────
+  const items = useAppStore((s) => s.pantryItems);
+  const addPantryItem = useAppStore((s) => s.addPantryItem);
+  const addPantryItems = useAppStore((s) => s.addPantryItems);
+  const updatePantryItem = useAppStore((s) => s.updatePantryItem);
+  const removePantryItem = useAppStore((s) => s.removePantryItem);
+
+  // Grocery list diffing function from store (Phase 2.D)
+  const generateGroceryList = useAppStore((s) => s.generateGroceryList);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showShopping, setShowShopping] = useState(false);
+  const [groceryList, setGroceryList] = useState([]);
   const [detectedItems, setDetectedItems] = useState([]);
   const [showDetectedModal, setShowDetectedModal] = useState(false);
 
@@ -178,11 +179,6 @@ const PantryManager = () => {
     });
   }, [items, selectedCategory, searchQuery]);
 
-  const shoppingSuggestions = useMemo(
-    () => generateShoppingSuggestions(items),
-    [items]
-  );
-
   const handleAdd = () => {
     setEditItem(null);
     setModalOpen(true);
@@ -194,16 +190,14 @@ const PantryManager = () => {
   };
 
   const handleDelete = (id) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
+    removePantryItem(id);
   };
 
   const handleSave = (formData) => {
     if (editItem) {
-      setItems((prev) =>
-        prev.map((i) => (i.id === editItem.id ? { ...i, ...formData } : i))
-      );
+      updatePantryItem(editItem.id, formData);
     } else {
-      setItems((prev) => [...prev, { id: nextId++, ...formData }]);
+      addPantryItem(formData);
     }
   };
 
@@ -213,12 +207,20 @@ const PantryManager = () => {
   };
 
   const handleAddDetectedItems = () => {
-    setItems((prev) => [
-      ...prev,
-      ...detectedItems.map((item) => ({ id: nextId++, ...item })),
-    ]);
+    addPantryItems(detectedItems);
     setShowDetectedModal(false);
     setDetectedItems([]);
+  };
+
+  /**
+   * Phase 2.D: Generate AI Grocery List
+   * Uses the diffing function from the store that cross-references
+   * meal planner ingredients with current pantry inventory.
+   */
+  const handleGenerateGroceryList = () => {
+    const list = generateGroceryList();
+    setGroceryList(list);
+    setShowShopping(true);
   };
 
   const expiringCount = items.filter((i) => isExpiringSoon(i.expiry)).length;
@@ -271,7 +273,7 @@ const PantryManager = () => {
         </Card>
       </div>
 
-      {/* Scan Groceries + Shopping Suggestions Row */}
+      {/* Scan Groceries + Smart Grocery List Row */}
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
         {/* Scan Groceries Card */}
         <Card extra="p-5">
@@ -287,57 +289,75 @@ const PantryManager = () => {
           <PantryImageUploadZone onItemsDetected={handleItemsDetected} />
         </Card>
 
-        {/* Smart Shopping Suggestions */}
+        {/* Smart Grocery List — Phase 2.D: Diff Meal Plan vs Pantry */}
         <Card extra="p-5">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <MdOutlineAutoAwesome className="h-5 w-5 text-brand-500" />
               <h3 className="text-base font-bold text-navy-700 dark:text-white">
-                Next Week's Grocery List
+                Smart Grocery List
               </h3>
             </div>
             <button
-              onClick={() => setShowShopping(!showShopping)}
+              onClick={() => {
+                if (showShopping) {
+                  setShowShopping(false);
+                } else {
+                  handleGenerateGroceryList();
+                }
+              }}
               className="rounded-xl bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-600"
             >
               {showShopping ? "Hide" : "Generate AI List"}
             </button>
           </div>
           <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">
-            AI-powered suggestions based on your dietary habits, goals, and current pantry inventory.
+            Cross-references your meal plan with pantry inventory — only shows what's missing.
           </p>
           {showShopping && (
             <div className="space-y-2 max-h-56 overflow-y-auto">
-              {shoppingSuggestions.slice(0, 8).map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-navy-700"
-                >
-                  <div className="flex items-start gap-2">
-                    <MdOutlineShoppingCart className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-500" />
-                    <div>
-                      <p className="text-sm font-semibold text-navy-700 dark:text-white">
-                        {item.name}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {item.reason}
-                      </p>
-                    </div>
-                  </div>
-                  <span
-                    className={`ml-2 flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${priorityColor[item.priority]}`}
-                  >
-                    {item.priority}
-                  </span>
+              {groceryList.length === 0 ? (
+                <div className="flex flex-col items-center justify-center rounded-2xl bg-green-50 py-6 dark:bg-navy-700">
+                  <span className="mb-2 text-2xl">✅</span>
+                  <p className="text-sm font-semibold text-green-600">
+                    You have everything you need!
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Your pantry covers all planned meals.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                groceryList.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-navy-700"
+                  >
+                    <div className="flex items-start gap-2">
+                      <MdOutlineShoppingCart className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-500" />
+                      <div>
+                        <p className="text-sm font-semibold text-navy-700 dark:text-white">
+                          {item.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {item.reason}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`ml-2 flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${priorityColor[item.priority]}`}
+                    >
+                      {item.priority}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           )}
           {!showShopping && (
             <div className="flex flex-col items-center justify-center rounded-2xl bg-gray-50 py-6 dark:bg-navy-700">
               <MdOutlineShoppingCart className="mb-2 h-8 w-8 text-gray-400" />
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Click "Generate AI List" to get personalised suggestions
+                Click "Generate AI List" to see what you need to buy
               </p>
             </div>
           )}
@@ -384,7 +404,6 @@ const PantryManager = () => {
 
           {/* Table or Empty State */}
           {items.length === 0 ? (
-            /* Empty Pantry State */
             <div className="flex flex-col items-center justify-center py-20">
               <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-brand-50 dark:bg-navy-700">
                 <MdOutlineInventory2 className="h-10 w-10 text-brand-500" />
@@ -517,7 +536,7 @@ const PantryManager = () => {
         </Card>
       </div>
 
-      {/* Add/Edit Modal — with focus overlay */}
+      {/* Add/Edit Modal */}
       <AddIngredientModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
