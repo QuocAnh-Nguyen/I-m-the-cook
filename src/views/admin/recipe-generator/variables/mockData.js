@@ -1,0 +1,83 @@
+// ChefOne — AI Recipe Generator Mock Data
+
+export const mockRecipeResult = {
+  name: "Creamy Tuscan Chicken",
+  prepTime: "10 min",
+  cookTime: "25 min",
+  servings: 4,
+  difficulty: "Easy",
+  calories: 520,
+  nutrition: {
+    protein: 42,
+    carbs: 18,
+    fat: 30,
+    fiber: 3,
+  },
+  ingredients: [
+    { amount: "4", unit: "pieces", name: "chicken breasts" },
+    { amount: "1 cup", unit: "", name: "heavy cream" },
+    { amount: "1 cup", unit: "", name: "cherry tomatoes, halved" },
+    { amount: "3 cups", unit: "", name: "fresh spinach" },
+    { amount: "4 cloves", unit: "", name: "garlic, minced" },
+    { amount: "1/2 cup", unit: "", name: "sun-dried tomatoes" },
+    { amount: "1/2 cup", unit: "", name: "parmesan cheese, grated" },
+    { amount: "2 tbsp", unit: "", name: "olive oil" },
+    { amount: "1 tsp", unit: "", name: "Italian seasoning" },
+    { amount: "", unit: "", name: "Salt and pepper to taste" },
+  ],
+  steps: [
+    "Season chicken breasts with salt, pepper, and Italian seasoning on both sides.",
+    "Heat olive oil in a large skillet over medium-high heat. Sear chicken for 5–6 minutes per side until golden brown. Remove and set aside.",
+    "In the same pan, sauté garlic for 30 seconds until fragrant.",
+    "Add sun-dried tomatoes and cherry tomatoes. Cook for 2 minutes.",
+    "Pour in heavy cream and bring to a gentle simmer.",
+    "Add parmesan cheese and stir until melted and sauce thickens slightly.",
+    "Add fresh spinach and stir until wilted (about 1 minute).",
+    "Return chicken to the pan, spoon sauce over it. Simmer for 3–4 minutes until chicken is cooked through.",
+    "Serve over pasta, rice, or with crusty bread.",
+  ],
+  tags: ["Italian", "High Protein", "Creamy", "Gluten-Free option"],
+};
+
+export const recipeHistory = [
+  {
+    id: 1,
+    name: "Creamy Tuscan Chicken",
+    prompt: "chicken, spinach, tomatoes, cream",
+    calories: 520,
+    date: "2026-05-10",
+    status: "Saved",
+  },
+  {
+    id: 2,
+    name: "Avocado Shrimp Tacos",
+    prompt: "shrimp, avocado, lime, corn tortillas",
+    calories: 380,
+    date: "2026-05-09",
+    status: "Saved",
+  },
+  {
+    id: 3,
+    name: "Lemon Herb Salmon",
+    prompt: "salmon fillet, lemon, dill, asparagus",
+    calories: 460,
+    date: "2026-05-08",
+    status: "Saved",
+  },
+  {
+    id: 4,
+    name: "Vegetable Stir-Fry",
+    prompt: "bell peppers, broccoli, tofu, soy sauce",
+    calories: 290,
+    date: "2026-05-07",
+    status: "Saved",
+  },
+  {
+    id: 5,
+    name: "Mushroom Pasta",
+    prompt: "mushrooms, pasta, garlic, parsley",
+    calories: 510,
+    date: "2026-05-06",
+    status: "Draft",
+  },
+];
