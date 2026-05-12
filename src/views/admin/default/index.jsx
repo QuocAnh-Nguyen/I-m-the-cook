@@ -28,7 +28,7 @@ import {
   MdOutlineCalendarMonth,
   MdOutlineInventory2,
   MdOutlineAutoAwesome,
-  MdOutlineSettings,
+  // MdOutlineSettings, // TODO: Re-enable when authentication is deployed
   MdOutlineWarning,
   MdOutlineError,
   MdOutlineInfo,
@@ -207,12 +207,13 @@ const Dashboard = () => {
       path: "/admin/nutrition-tracking",
       bg: "bg-orange-50 hover:bg-orange-100 dark:bg-navy-700 dark:hover:bg-navy-600",
     },
-    {
-      icon: <MdOutlineSettings className="h-8 w-8 text-gray-500" />,
-      label: "Profile Settings",
-      path: "/admin/profile",
-      bg: "bg-gray-50 hover:bg-gray-100 dark:bg-navy-700 dark:hover:bg-navy-600",
-    },
+    // TODO: Re-enable when authentication is deployed
+    // {
+    //   icon: <MdOutlineSettings className="h-8 w-8 text-gray-500" />,
+    //   label: "Profile Settings",
+    //   path: "/admin/profile",
+    //   bg: "bg-gray-50 hover:bg-gray-100 dark:bg-navy-700 dark:hover:bg-navy-600",
+    // },
   ];
 
   // Alert icon mapping

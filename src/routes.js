@@ -7,7 +7,8 @@ import PantryManager from "views/admin/pantry";
 import MealPlanner from "views/admin/meal-planner";
 import NutritionTracking from "views/admin/nutrition-tracking";
 import MyRecipes from "views/admin/my-recipes";
-import ProfileOverview from "views/admin/profile";
+// TODO: Re-enable when authentication is deployed
+// import ProfileOverview from "views/admin/profile";
 
 // Icon Imports
 import {
@@ -17,7 +18,7 @@ import {
   MdOutlineCalendarMonth,
   MdOutlineLocalFireDepartment,
   MdOutlineBookmark,
-  MdOutlineSettings,
+  // MdOutlineSettings, // TODO: Re-enable when authentication is deployed
 } from "react-icons/md";
 
 /**
@@ -70,13 +71,14 @@ const routes = [
     icon: <MdOutlineLocalFireDepartment className="h-6 w-6" />,
     component: <NutritionTracking />,
   },
-  {
-    name: "Profile Settings",
-    layout: "/admin",
-    path: "profile",
-    icon: <MdOutlineSettings className="h-6 w-6" />,
-    component: <ProfileOverview />,
-  },
+  // TODO: Re-enable when authentication is deployed
+  // {
+  //   name: "Profile Settings",
+  //   layout: "/admin",
+  //   path: "profile",
+  //   icon: <MdOutlineSettings className="h-6 w-6" />,
+  //   component: <ProfileOverview />,
+  // },
 ];
 
 export default routes;

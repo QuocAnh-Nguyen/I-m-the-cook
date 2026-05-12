@@ -153,12 +153,14 @@ const Navbar = (props) => {
               <div className="h-px w-full bg-gray-200 dark:bg-white/20 " />
 
               <div className="flex flex-col p-4">
+                {/* TODO: Re-enable when authentication is deployed
                 <Link
                   to="/admin/profile"
                   className="text-sm text-gray-800 dark:text-white hover:dark:text-white"
                 >
                   Profile Settings
                 </Link>
+                */}
                 <Link
                   to="/admin/my-recipes"
                   className="mt-3 text-sm text-gray-800 dark:text-white hover:dark:text-white"
