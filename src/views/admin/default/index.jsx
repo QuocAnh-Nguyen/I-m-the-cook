@@ -33,6 +33,7 @@ import {
   MdOutlineError,
   MdOutlineInfo,
   MdOutlineChevronRight,
+  MdOutlineCameraAlt,
 } from "react-icons/md";
 
 // ─── Helper functions (moved outside component, referentially stable) ──────
@@ -189,6 +190,24 @@ const Dashboard = () => {
       bg: "bg-green-50 hover:bg-green-100 dark:bg-navy-700 dark:hover:bg-navy-600",
     },
     {
+      icon: <MdOutlineCalendarMonth className="h-8 w-8 text-amber-500" />,
+      label: "Meal Planner",
+      path: "/admin/meal-planner",
+      bg: "bg-amber-50 hover:bg-amber-100 dark:bg-navy-700 dark:hover:bg-navy-600",
+    },
+    {
+      icon: <MdOutlineMenuBook className="h-8 w-8 text-blue-500" />,
+      label: "My Recipes",
+      path: "/admin/my-recipes",
+      bg: "bg-blue-50 hover:bg-blue-100 dark:bg-navy-700 dark:hover:bg-navy-600",
+    },
+    {
+      icon: <MdOutlineCameraAlt className="h-8 w-8 text-orange-500" />,
+      label: "Scan Food",
+      path: "/admin/nutrition-tracking",
+      bg: "bg-orange-50 hover:bg-orange-100 dark:bg-navy-700 dark:hover:bg-navy-600",
+    },
+    {
       icon: <MdOutlineSettings className="h-8 w-8 text-gray-500" />,
       label: "Profile Settings",
       path: "/admin/profile",
@@ -278,7 +297,7 @@ const Dashboard = () => {
         <h2 className="mb-4 text-lg font-bold text-navy-700 dark:text-white">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-2 gap-5 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7">
           {quickActions.map((action) => (
             <button
               key={action.label}

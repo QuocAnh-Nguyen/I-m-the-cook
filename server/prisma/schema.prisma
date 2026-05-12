@@ -13,17 +13,21 @@ datasource db {
 // ─── AUTH ─────────────────────────────────────────────────────────
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String
-  name          String
-  avatarUrl     String?
-  calorieGoal   Int      @default(2000)
-  proteinGoal   Int      @default(150)
-  carbsGoal     Int      @default(250)
-  fatGoal       Int      @default(65)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  email               String   @unique
+  passwordHash        String
+  name                String
+  avatarUrl           String?
+  calorieGoal         Int      @default(2000)
+  proteinGoal         Int      @default(150)
+  carbsGoal           Int      @default(250)
+  fatGoal             Int      @default(65)
+  dietaryPreferences  String   @default("[]")   // JSON: ["vegetarian","low-carb",...]
+  cuisinePreferences  String   @default("[]")   // JSON: ["Vietnamese","Italian",...]
+  allergies           String   @default("[]")   // JSON: ["nuts","shellfish",...]
+  familySize          Int      @default(2)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   // Relations
   recipes           Recipe[]
@@ -60,8 +64,8 @@ model Recipe {
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  mealSlots   MealSlot[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealSlotDishes  MealSlotDish[]
 
   @@index([userId])
   @@index([userId, createdAt])
@@ -117,19 +121,37 @@ model MealSlot {
   weekStart  DateTime          // Monday of the week (ISO date, time=00:00)
   day        String            // Mon | Tue | Wed | Thu | Fri | Sat | Sun
   mealType   String            // Breakfast | Lunch | Dinner | Snack
-  recipeId   String?           // nullable if manual entry (e.g., from calorie tracker sync)
-  customName String?           // for non-recipe meals
-  calories   Int
   synced     Boolean           @default(false) // true if auto-synced from calorie tracker
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
 
   user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  recipe     Recipe?           @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  dishes     MealSlotDish[]
 
   @@unique([userId, weekStart, day, mealType])
   @@index([userId, weekStart])
   @@map("meal_slots")
+}
+
+// ─── MEAL SLOT DISHES (Multi-dish support) ─────────────────────────
+
+model MealSlotDish {
+  id         String   @id @default(uuid())
+  mealSlotId String
+  recipeId   String?
+  customName String?           // for non-recipe dishes (e.g., "White Rice", "Morning Glory Soup")
+  calories   Int               @default(0)
+  protein    Int               @default(0)
+  carbs      Int               @default(0)
+  fat        Int               @default(0)
+  sortOrder  Int               @default(0) // display order within the meal
+  createdAt  DateTime          @default(now())
+
+  mealSlot   MealSlot          @relation(fields: [mealSlotId], references: [id], onDelete: Cascade)
+  recipe     Recipe?           @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  @@index([mealSlotId])
+  @@map("meal_slot_dishes")
 }
 
 // ─── CALORIE TRACKER ──────────────────────────────────────────────

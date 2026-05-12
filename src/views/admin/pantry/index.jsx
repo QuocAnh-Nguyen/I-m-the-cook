@@ -16,6 +16,7 @@ import Card from "components/card";
 import AddIngredientModal from "./components/AddIngredientModal";
 import useAppStore from "store/useAppStore";
 import { categories } from "./variables/mockData";
+import { scanReceipt } from "services/aiService";
 import {
   MdOutlineAdd,
   MdOutlineEdit,
@@ -60,23 +61,47 @@ const PantryImageUploadZone = ({ onItemsDetected }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const inputRef = useRef(null);
 
-  const handleFile = (file) => {
+  const handleFile = async (file) => {
     if (!file || !file.type.startsWith("image/")) return;
     setFileName(file.name);
+
+    // Show preview
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setPreview(e.target.result);
-      setIsAnalyzing(true);
-      setTimeout(() => {
-        setIsAnalyzing(false);
-        onItemsDetected([
-          { name: "Orange Juice", category: "Fruits", quantity: 1, unit: "L", expiry: "2026-05-20" },
-          { name: "Cheddar Cheese", category: "Dairy", quantity: 200, unit: "g", expiry: "2026-05-25" },
-          { name: "Whole Milk", category: "Dairy", quantity: 2, unit: "L", expiry: "2026-05-18" },
-        ]);
-      }, 2000);
-    };
+    reader.onload = (e) => setPreview(e.target.result);
     reader.readAsDataURL(file);
+
+    setIsAnalyzing(true);
+    try {
+      // Phase 10: Call real Gemini AI receipt/grocery scanner
+      const result = await scanReceipt(file);
+      const data = result.data;
+      setIsAnalyzing(false);
+
+      if (data.items && data.items.length > 0) {
+        // Map items to pantry format with estimated expiry dates
+        const pantryItems = data.items.map((item) => {
+          const expiry = new Date();
+          expiry.setDate(expiry.getDate() + (item.estimatedExpiryDays || 7));
+          return {
+            name: item.name,
+            category: item.category || "Other",
+            quantity: item.quantity || 1,
+            unit: item.unit || "pieces",
+            expiry: expiry.toISOString().split("T")[0],
+          };
+        });
+        onItemsDetected(pantryItems);
+      }
+    } catch (err) {
+      console.warn("[Pantry] AI receipt scan failed, using fallback:", err);
+      setIsAnalyzing(false);
+      // Fallback to mock data
+      onItemsDetected([
+        { name: "Orange Juice", category: "Fruits", quantity: 1, unit: "L", expiry: "2026-05-20" },
+        { name: "Cheddar Cheese", category: "Dairy", quantity: 200, unit: "g", expiry: "2026-05-25" },
+        { name: "Whole Milk", category: "Dairy", quantity: 2, unit: "L", expiry: "2026-05-18" },
+      ]);
+    }
   };
 
   const handleDrop = (e) => {

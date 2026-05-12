@@ -14,6 +14,8 @@ const env = {
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
   MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE, 10) || 10 * 1024 * 1024,
   UPLOAD_DIR: process.env.UPLOAD_DIR || './uploads',
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-2.0-flash',
 };
 
 // Validate critical env vars in production

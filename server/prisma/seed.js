@@ -41,6 +41,7 @@ async function main() {
 
   // Order matters: delete children first to avoid FK violations
   await prisma.generationHistory.deleteMany();
+  await prisma.mealSlotDish.deleteMany();
   await prisma.mealSlot.deleteMany();
   await prisma.calorieEntry.deleteMany();
   await prisma.shoppingItem.deleteMany();
@@ -61,6 +62,10 @@ async function main() {
       proteinGoal: 150,
       carbsGoal: 250,
       fatGoal: 65,
+      dietaryPreferences: JSON.stringify(['balanced']),
+      cuisinePreferences: JSON.stringify(['Vietnamese', 'Italian']),
+      allergies: JSON.stringify([]),
+      familySize: 3,
     },
   });
 
@@ -202,18 +207,25 @@ async function main() {
   console.log('[seed] Creating pantry items...');
 
   const pantryItems = [
+    // Vietnamese-style ingredients for Mâm cơm
     { name: 'Chicken Breast', category: 'Proteins', quantity: 1.2, unit: 'kg', expiry: daysFromNow(5) },
-    { name: 'Garlic', category: 'Vegetables', quantity: 3, unit: 'pieces', expiry: daysFromNow(21) },
-    { name: 'Olive Oil', category: 'OilsAndCondiments', quantity: 500, unit: 'ml', expiry: daysFromNow(90) },
-    { name: 'Heavy Cream', category: 'Dairy', quantity: 200, unit: 'ml', expiry: daysFromNow(7) },
-    { name: 'Parmesan Cheese', category: 'Dairy', quantity: 150, unit: 'g', expiry: daysFromNow(14) },
-    { name: 'Fresh Spinach', category: 'Vegetables', quantity: 250, unit: 'g', expiry: daysFromNow(3) },
+    { name: 'Pork Belly', category: 'Proteins', quantity: 500, unit: 'g', expiry: daysFromNow(4) },
+    { name: 'Shrimp', category: 'Proteins', quantity: 300, unit: 'g', expiry: daysFromNow(2) },
+    { name: 'Firm Tofu', category: 'Proteins', quantity: 2, unit: 'pieces', expiry: daysFromNow(7) },
+    { name: 'Garlic', category: 'Vegetables', quantity: 5, unit: 'cloves', expiry: daysFromNow(21) },
+    { name: 'Green Onion', category: 'Vegetables', quantity: 1, unit: 'bunch', expiry: daysFromNow(5) },
+    { name: 'Morning Glory (Rau Muống)', category: 'Vegetables', quantity: 500, unit: 'g', expiry: daysFromNow(3) },
+    { name: 'Bok Choy', category: 'Vegetables', quantity: 300, unit: 'g', expiry: daysFromNow(4) },
+    { name: 'Tomato', category: 'Fruits', quantity: 4, unit: 'pieces', expiry: daysFromNow(10) },
     { name: 'Lemon', category: 'Fruits', quantity: 4, unit: 'pieces', expiry: daysFromNow(14) },
-    { name: 'Rice', category: 'Grains', quantity: 2, unit: 'kg', expiry: daysFromNow(180) },
+    { name: 'Jasmine Rice', category: 'Grains', quantity: 5, unit: 'kg', expiry: daysFromNow(180) },
+    { name: 'Rice Noodles', category: 'Grains', quantity: 1, unit: 'kg', expiry: daysFromNow(90) },
     { name: 'Eggs', category: 'Proteins', quantity: 12, unit: 'pieces', expiry: daysFromNow(21) },
-    { name: 'Butter', category: 'Dairy', quantity: 250, unit: 'g', expiry: daysFromNow(30) },
+    { name: 'Fish Sauce', category: 'OilsAndCondiments', quantity: 500, unit: 'ml', expiry: daysFromNow(180) },
+    { name: 'Soy Sauce', category: 'OilsAndCondiments', quantity: 300, unit: 'ml', expiry: daysFromNow(120) },
+    { name: 'Cooking Oil', category: 'OilsAndCondiments', quantity: 1, unit: 'L', expiry: daysFromNow(90) },
+    { name: 'Oyster Sauce', category: 'OilsAndCondiments', quantity: 200, unit: 'ml', expiry: daysFromNow(60) },
     { name: 'Onion', category: 'Vegetables', quantity: 5, unit: 'pieces', expiry: daysFromNow(30) },
-    { name: 'Tomato Sauce', category: 'OilsAndCondiments', quantity: 400, unit: 'ml', expiry: daysFromNow(60) },
   ];
 
   for (const item of pantryItems) {
@@ -224,34 +236,95 @@ async function main() {
 
   console.log(`[seed]   Created ${pantryItems.length} pantry items`);
 
-  // ─── Weekly Meal Plan ────────────────────────────────────────
+  // ─── Weekly Meal Plan (Multi-dish "Mâm cơm Việt" style) ────────
 
-  console.log('[seed] Creating weekly meal plan...');
+  console.log('[seed] Creating weekly meal plan with Vietnamese multi-dish meals...');
 
   const today = new Date();
   const monday = getMondayOfWeek(today);
 
-  const mealSlots = [
-    { day: 'Mon', mealType: 'Breakfast', recipeId: null, customName: 'Oatmeal with Berries', calories: 350 },
-    { day: 'Mon', mealType: 'Lunch', recipeId: null, customName: 'Chicken Salad Wrap', calories: 480 },
-    { day: 'Mon', mealType: 'Dinner', recipeId: recipe1.id, customName: null, calories: 520 },
-    { day: 'Tue', mealType: 'Breakfast', recipeId: null, customName: 'Greek Yogurt Parfait', calories: 300 },
-    { day: 'Tue', mealType: 'Lunch', recipeId: null, customName: 'Leftover Tuscan Chicken', calories: 520 },
-    { day: 'Tue', mealType: 'Dinner', recipeId: recipe3.id, customName: null, calories: 450 },
-    { day: 'Wed', mealType: 'Breakfast', recipeId: null, customName: 'Scrambled Eggs on Toast', calories: 400 },
-    { day: 'Wed', mealType: 'Lunch', recipeId: recipe2.id, customName: null, calories: 380 },
-    { day: 'Wed', mealType: 'Dinner', recipeId: null, customName: 'Grilled Steak with Veggies', calories: 650 },
-    { day: 'Thu', mealType: 'Breakfast', recipeId: null, customName: 'Smoothie Bowl', calories: 320 },
-    { day: 'Thu', mealType: 'Dinner', recipeId: recipe1.id, customName: null, calories: 520 },
-  ];
-
-  for (const slot of mealSlots) {
-    await prisma.mealSlot.create({
-      data: { userId, weekStart: monday, ...slot },
+  /**
+   * Helper: Create a meal slot with multiple dishes.
+   */
+  const createMealSlot = async (day, mealType, dishes, synced = false) => {
+    const slot = await prisma.mealSlot.create({
+      data: { userId, weekStart: monday, day, mealType, synced },
     });
-  }
+    for (const dish of dishes) {
+      await prisma.mealSlotDish.create({
+        data: {
+          mealSlotId: slot.id,
+          recipeId: dish.recipeId || null,
+          customName: dish.customName || null,
+          calories: dish.calories || 0,
+          protein: dish.protein || 0,
+          carbs: dish.carbs || 0,
+          fat: dish.fat || 0,
+          sortOrder: dish.sortOrder || 0,
+        },
+      });
+    }
+    return slot;
+  };
 
-  console.log(`[seed]   Created ${mealSlots.length} meal slots`);
+  // Monday Lunch — Traditional Vietnamese mâm cơm
+  await createMealSlot('Mon', 'Lunch', [
+    { customName: 'Steamed Jasmine Rice (Cơm trắng)', calories: 200, protein: 4, carbs: 44, fat: 0, sortOrder: 0 },
+    { customName: 'Morning Glory Soup (Canh rau muống)', calories: 85, protein: 3, carbs: 8, fat: 2, sortOrder: 1 },
+    { customName: 'Braised Pork Belly (Thịt kho tàu)', calories: 380, protein: 22, carbs: 8, fat: 30, sortOrder: 2 },
+    { customName: 'Stir-fried Tofu with Tomato Sauce', calories: 180, protein: 12, carbs: 10, fat: 10, sortOrder: 3 },
+  ]);
+
+  // Monday Dinner
+  await createMealSlot('Mon', 'Dinner', [
+    { customName: 'Steamed Jasmine Rice (Cơm trắng)', calories: 200, protein: 4, carbs: 44, fat: 0, sortOrder: 0 },
+    { recipeId: recipe1.id, calories: 520, protein: 38, carbs: 12, fat: 34, sortOrder: 1 },
+    { customName: 'Stir-fried Bok Choy with Garlic', calories: 80, protein: 3, carbs: 6, fat: 5, sortOrder: 2 },
+  ]);
+
+  // Tuesday Lunch
+  await createMealSlot('Tue', 'Lunch', [
+    { customName: 'Steamed Jasmine Rice (Cơm trắng)', calories: 200, protein: 4, carbs: 44, fat: 0, sortOrder: 0 },
+    { customName: 'Sour Fish Soup (Canh chua cá)', calories: 150, protein: 18, carbs: 10, fat: 4, sortOrder: 1 },
+    { recipeId: recipe3.id, calories: 450, protein: 42, carbs: 8, fat: 28, sortOrder: 2 },
+    { customName: 'Pickled Vegetables (Dưa chua)', calories: 30, protein: 1, carbs: 6, fat: 0, sortOrder: 3 },
+  ]);
+
+  // Tuesday Dinner
+  await createMealSlot('Tue', 'Dinner', [
+    { customName: 'Steamed Jasmine Rice (Cơm trắng)', calories: 200, protein: 4, carbs: 44, fat: 0, sortOrder: 0 },
+    { customName: 'Vegetable Soup (Canh rau củ)', calories: 90, protein: 3, carbs: 12, fat: 2, sortOrder: 1 },
+    { recipeId: recipe2.id, calories: 380, protein: 28, carbs: 32, fat: 18, sortOrder: 2 },
+    { customName: 'Fried Egg (Trứng chiên)', calories: 120, protein: 8, carbs: 1, fat: 9, sortOrder: 3 },
+  ]);
+
+  // Wednesday Lunch
+  await createMealSlot('Wed', 'Lunch', [
+    { customName: 'Steamed Jasmine Rice (Cơm trắng)', calories: 200, protein: 4, carbs: 44, fat: 0, sortOrder: 0 },
+    { customName: 'Shrimp and Tofu Soup', calories: 120, protein: 14, carbs: 6, fat: 4, sortOrder: 1 },
+    { customName: 'Caramelized Chicken (Gà kho gừng)', calories: 350, protein: 35, carbs: 10, fat: 18, sortOrder: 2 },
+    { customName: 'Boiled Morning Glory (Rau muống luộc)', calories: 50, protein: 2, carbs: 6, fat: 0, sortOrder: 3 },
+  ]);
+
+  // Wednesday Dinner
+  await createMealSlot('Wed', 'Dinner', [
+    { customName: 'Steamed Jasmine Rice (Cơm trắng)', calories: 200, protein: 4, carbs: 44, fat: 0, sortOrder: 0 },
+    { customName: 'Crab and Asparagus Soup (Súp măng cua)', calories: 180, protein: 12, carbs: 15, fat: 8, sortOrder: 1 },
+    { recipeId: recipe1.id, calories: 520, protein: 38, carbs: 12, fat: 34, sortOrder: 2 },
+  ]);
+
+  // Thursday Lunch — simple breakfast/lunch
+  await createMealSlot('Thu', 'Breakfast', [
+    { customName: 'Chicken Pho (Phở gà)', calories: 450, protein: 28, carbs: 55, fat: 12, sortOrder: 0 },
+  ]);
+
+  await createMealSlot('Thu', 'Lunch', [
+    { customName: 'Steamed Jasmine Rice (Cơm trắng)', calories: 200, protein: 4, carbs: 44, fat: 0, sortOrder: 0 },
+    { customName: 'Stir-fried Beef with Onion (Bò xào hành)', calories: 320, protein: 30, carbs: 12, fat: 18, sortOrder: 1 },
+    { customName: 'Tomato and Egg Soup (Canh cà chua trứng)', calories: 110, protein: 7, carbs: 8, fat: 5, sortOrder: 2 },
+  ]);
+
+  console.log('[seed]   Created multi-dish Vietnamese meal slots');
 
   // ─── Calorie Entries (Today) ─────────────────────────────────
 
