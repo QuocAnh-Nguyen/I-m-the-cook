@@ -1,5 +1,6 @@
 import React, { useState, useRef } from "react";
 import Card from "components/card";
+import { analyzeFood } from "services/aiService";
 import {
   MdOutlineLocalFireDepartment,
   MdOutlineCameraAlt,
@@ -150,26 +151,83 @@ const CalorieTracker = () => {
     setEntries((prev) => prev.filter((e) => e.id !== id));
   };
 
-  const handlePhotoUpload = (file) => {
+  const handlePhotoUpload = async (file) => {
     if (!file || !file.type.startsWith("image/")) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       setPhotoPreview(ev.target.result);
       setIsAnalyzing(true);
-      // Simulate AI analysis filling in form
-      setTimeout(() => {
+      try {
+        const result = await analyzeFood(file);
+        const data = result.data;
+        if (data.dishes && data.dishes.length > 0) {
+          // Use the highest-confidence dish as the primary entry
+          const bestDish = data.dishes.reduce((best, d) =>
+            (d.confidence || 0) > (best.confidence || 0) ? d : best
+          );
+          setForm({
+            mealType: bestDish.mealType || "Lunch",
+            foodName: bestDish.name || "Unknown Food",
+            quantity: "1",
+            unit: bestDish.servingSize || "serving",
+            calories: String(bestDish.calories || 0),
+            protein: String(bestDish.protein || 0),
+            carbs: String(bestDish.carbs || 0),
+            fat: String(bestDish.fat || 0),
+          });
+        }
+      } catch {
+        // Fallback: keep the form empty so user fills manually
+        console.warn("[CalorieTracker] AI analysis failed, using manual entry");
+      } finally {
         setIsAnalyzing(false);
-        setForm({
-          mealType: "Lunch",
-          foodName: "Grilled Chicken",
-          quantity: "1",
-          unit: "serving",
-          calories: "320",
-          protein: "42",
-          carbs: "0",
-          fat: "14",
-        });
-      }, 2000);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Handler to add all detected dishes as individual entries
+  const handlePhotoUploadAllDishes = async (file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      setPhotoPreview(ev.target.result);
+      setIsAnalyzing(true);
+      try {
+        const result = await analyzeFood(file);
+        const data = result.data;
+        if (data.dishes && data.dishes.length > 0) {
+          const newEntries = data.dishes.map((dish) => ({
+            id: entryId++,
+            date: selectedDate,
+            mealType: dish.mealType || "Lunch",
+            foodName: dish.name || "Unknown Food",
+            quantity: 1,
+            unit: dish.servingSize || "serving",
+            calories: dish.calories || 0,
+            protein: dish.protein || 0,
+            carbs: dish.carbs || 0,
+            fat: dish.fat || 0,
+            fromPhoto: true,
+          }));
+          setEntries((prev) => [...prev, ...newEntries]);
+          // Auto-sync first entry to meal planner
+          if (newEntries.length > 0) {
+            const synced = syncToMealPlanner(newEntries[0]);
+            if (synced) {
+              setSyncedEntry(newEntries[0]);
+              setShowSyncBanner(true);
+              setTimeout(() => setShowSyncBanner(false), 5000);
+            }
+          }
+          setPhotoPreview(null);
+          setForm(EMPTY_FORM);
+        }
+      } catch {
+        console.warn("[CalorieTracker] AI multi-dish analysis failed");
+      } finally {
+        setIsAnalyzing(false);
+      }
     };
     reader.readAsDataURL(file);
   };

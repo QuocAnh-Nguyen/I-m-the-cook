@@ -188,12 +188,30 @@ const MealPlanner = () => {
 
   const handleAISuggest = async () => {
     setIsGenerating(true);
-    // Simulate AI generation delay
-    setTimeout(() => {
-      // Generate mock Vietnamese meal suggestions for days that are empty
+    try {
+      const { suggestMealPlan } = await import("services/aiService");
+      const res = await suggestMealPlan({
+        pantryItems: pantryItems.map((p) => ({
+          name: p.name,
+          category: p.category,
+          quantity: p.quantity,
+          unit: p.unit,
+          daysUntilExpiry: Math.ceil(
+            (new Date(p.expiry) - new Date()) / (1000 * 60 * 60 * 24)
+          ),
+        })),
+        existingPlan: weeklyPlan,
+        familySize: 2,
+      });
+      const suggestions = res.data?.suggestions;
+      if (suggestions && Object.keys(suggestions).length > 0) {
+        applyAISuggestions(suggestions);
+      }
+    } catch {
+      // Fallback: generate simple mock Vietnamese meal suggestions
       const suggestions = {};
       DAYS.forEach((day) => {
-        if (isDayPast(day, selectedWeekOffset)) return; // Skip past days
+        if (isDayPast(day, selectedWeekOffset)) return;
         ["Lunch", "Dinner"].forEach((mt) => {
           const key = `${day}-${mt}`;
           if (!weeklyPlan[key]) {
@@ -208,8 +226,9 @@ const MealPlanner = () => {
         });
       });
       applyAISuggestions(suggestions);
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   };
 
   const handleShowAISuggestionModal = () => {

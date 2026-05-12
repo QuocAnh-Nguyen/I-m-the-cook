@@ -17,9 +17,9 @@ const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 
 /**
  * The model to use for all operations.
- * gemini-2.0-flash supports both text and vision in a single model.
+ * gemini-3.1-flash-lite-preview supports both text and vision in a single model.
  */
-const MODEL_NAME = env.GEMINI_MODEL || 'gemini-2.0-flash';
+const MODEL_NAME = env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
 /**
  * Get a generative model instance.
