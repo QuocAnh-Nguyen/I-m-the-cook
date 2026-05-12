@@ -62,9 +62,9 @@ async function main() {
       proteinGoal: 150,
       carbsGoal: 250,
       fatGoal: 65,
-      dietaryPreferences: JSON.stringify(['balanced']),
-      cuisinePreferences: JSON.stringify(['Vietnamese', 'Italian']),
-      allergies: JSON.stringify([]),
+      dietaryPreferences: ['balanced'],
+      cuisinePreferences: ['Vietnamese', 'Italian'],
+      allergies: [],
       familySize: 3,
     },
   });
@@ -110,9 +110,9 @@ async function main() {
       carbs: 12,
       fat: 34,
       fiber: 2,
-      tags: JSON.stringify(['Italian', 'Chicken', 'Pasta']),
-      ingredients: JSON.stringify(recipe1Ingredients),
-      steps: JSON.stringify(recipe1Steps),
+      tags: ['Italian', 'Chicken', 'Pasta'],
+      ingredients: recipe1Ingredients,
+      steps: recipe1Steps,
       source: 'MANUAL',
       isFavorite: true,
     },
@@ -152,9 +152,9 @@ async function main() {
       carbs: 32,
       fat: 18,
       fiber: 6,
-      tags: JSON.stringify(['Seafood', 'Tacos', 'Quick']),
-      ingredients: JSON.stringify(recipe2Ingredients),
-      steps: JSON.stringify(recipe2Steps),
+      tags: ['Seafood', 'Tacos', 'Quick'],
+      ingredients: recipe2Ingredients,
+      steps: recipe2Steps,
       source: 'AI_GENERATED',
       isFavorite: true,
     },
@@ -192,9 +192,9 @@ async function main() {
       carbs: 8,
       fat: 28,
       fiber: 2,
-      tags: JSON.stringify(['Seafood', 'Quick', 'Healthy']),
-      ingredients: JSON.stringify(recipe3Ingredients),
-      steps: JSON.stringify(recipe3Steps),
+      tags: ['Seafood', 'Quick', 'Healthy'],
+      ingredients: recipe3Ingredients,
+      steps: recipe3Steps,
       source: 'MANUAL',
       isFavorite: false,
     },
@@ -313,7 +313,7 @@ async function main() {
     { recipeId: recipe1.id, calories: 520, protein: 38, carbs: 12, fat: 34, sortOrder: 2 },
   ]);
 
-  // Thursday Lunch — simple breakfast/lunch
+  // Thursday — breakfast & lunch
   await createMealSlot('Thu', 'Breakfast', [
     { customName: 'Chicken Pho (Phở gà)', calories: 450, protein: 28, carbs: 55, fat: 12, sortOrder: 0 },
   ]);
@@ -330,7 +330,7 @@ async function main() {
 
   console.log('[seed] Creating calorie entries for today...');
 
-  const todayDate = dateString(daysFromNow(0));
+  const todayDate = daysFromNow(0);
 
   const calorieEntries = [
     { date: todayDate, mealType: 'Breakfast', foodName: 'Oatmeal with Berries', quantity: 1, unit: 'serving', calories: 350, protein: 12, carbs: 55, fat: 8 },
@@ -395,9 +395,9 @@ async function main() {
     data: {
       userId,
       prompt: 'Chicken, garlic, olive oil, spinach, tomatoes, cream',
-      filters: JSON.stringify({ mealType: 'Dinner', cookTime: 30, skill: 'Medium', chefMode: 'gourmet' }),
+      filters: { mealType: 'Dinner', cookTime: 30, skill: 'Medium', chefMode: 'gourmet' },
       resultName: 'Creamy Tuscan Chicken',
-      resultData: JSON.stringify(generationResultData),
+      resultData: generationResultData,
       status: 'SAVED',
       savedRecipeId: recipe1.id,
     },

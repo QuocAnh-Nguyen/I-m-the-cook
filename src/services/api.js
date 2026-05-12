@@ -1,12 +1,17 @@
 // src/services/api.js
 // ============================================================================
 // Axios API client — base instance with auth interceptors.
-// All API calls go through this instance. Uses CRA proxy to /api/v1.
+// All API calls go through this instance.
+//
+// In development (CRA): uses /api/v1 with the built-in proxy to localhost:5000
+// In production:       uses REACT_APP_API_URL env var (e.g., https://chefone-api.onrender.com/api/v1)
 // ============================================================================
 import axios from 'axios';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api/v1';
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: API_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 

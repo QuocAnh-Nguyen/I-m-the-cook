@@ -42,7 +42,7 @@ I-m-the-cook/
 │
 ├── server/                       # Node.js/Express backend
 │   ├── prisma/
-│   │   ├── schema.prisma         # Database models (SQLite)
+│   │   ├── schema.prisma         # Database models (PostgreSQL)
 │   │   ├── migrations/           # Prisma migration history
 │   │   └── seed.js               # Demo data seeder
 │   └── src/
@@ -63,7 +63,7 @@ I-m-the-cook/
 | Layer | Technology |
 |---|---|
 | **Frontend** | React 19, Tailwind CSS 3, React Router 6, Zustand, ApexCharts |
-| **Backend** | Node.js, Express 4, Prisma ORM 6, SQLite |
+| **Backend** | Node.js, Express 4, Prisma ORM 6, PostgreSQL (local) / Supabase (production) |
 | **AI** | Google Gemini (`gemini-3.1-flash-lite-preview`) — vision + text |
 | **Auth** | JWT (bcryptjs + jsonwebtoken), HTTP-only Bearer tokens |
 | **Uploads** | Multer (disk storage, 10MB limit, JPEG/PNG/WebP) |
@@ -81,6 +81,8 @@ I-m-the-cook/
 
 ### Installation
 
+**Prerequisites:** Node.js 18+ and PostgreSQL running locally (or use [Supabase](https://supabase.com) for a free remote DB).
+
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
@@ -94,11 +96,11 @@ cd server && npm install
 
 # 4. Configure environment variables
 cp .env.example .env
-# Edit server/.env with your settings (see Environment Variables below)
+# Edit server/.env with your settings (see table below)
 
 # 5. Set up the database
 npm run db:setup
-# This runs: prisma migrate dev && node prisma/seed.js
+# This runs: npx prisma migrate dev && node prisma/seed.js
 ```
 
 ### Environment Variables
@@ -109,10 +111,10 @@ Copy [`server/.env.example`](server/.env.example) to `server/.env` and configure
 |---|---|---|
 | `PORT` | Backend server port | `5000` |
 | `NODE_ENV` | Environment (`development` / `production`) | `development` |
-| `DATABASE_URL` | Prisma database connection | `file:./dev.db` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://chefone:chefone_dev@localhost:5432/chefone_db` |
 | `JWT_SECRET` | JWT signing secret (min 32 chars) | *required* |
 | `JWT_EXPIRES_IN` | Token expiry duration | `24h` |
-| `FRONTEND_URL` | CORS allowed origin | `http://localhost:3000` |
+| `FRONTEND_URL` | CORS allowed origin(s), comma-separated | `http://localhost:3000` |
 | `GEMINI_API_KEY` | Google Gemini API key | *required for AI features* |
 | `GEMINI_MODEL` | Gemini model name | `gemini-3.1-flash-lite-preview` |
 
@@ -231,14 +233,129 @@ All responses follow a consistent structure:
 
 | Model | Table | Key Fields |
 |---|---|---|
-| `User` | `users` | email, passwordHash, calorieGoal, dietaryPreferences, allergies |
-| `Recipe` | `recipes` | name, calories, protein, ingredients (JSON), steps (JSON), difficulty, source |
-| `PantryItem` | `pantry_items` | name, category, quantity, unit, expiry |
-| `MealSlot` | `meal_slots` | weekStart, day, mealType (unique per user/week/day/type) |
+| `User` | `users` | email, passwordHash, calorieGoal, dietaryPreferences (JSON), allergies (JSON) |
+| `Recipe` | `recipes` | name, calories, protein, ingredients (JSON), steps (text[]), tags (text[]), difficulty (enum) |
+| `PantryItem` | `pantry_items` | name, category (enum), quantity, unit, expiry |
+| `MealSlot` | `meal_slots` | weekStart, day (enum), mealType (enum) — unique per user/week/day/type |
 | `MealSlotDish` | `meal_slot_dishes` | mealSlotId, recipeId, customName, calories (multi-dish per slot) |
-| `CalorieEntry` | `calorie_entries` | date, mealType, foodName, calories, fromPhoto, imageUrl |
-| `ShoppingItem` | `shopping_items` | name, category, quantity, checked |
-| `GenerationHistory` | `generation_history` | prompt, imageUrl, resultData (JSON), status |
+| `CalorieEntry` | `calorie_entries` | date, mealType (enum), foodName, calories, fromPhoto, imageUrl |
+| `ShoppingItem` | `shopping_items` | name, category (enum), quantity, checked |
+| `GenerationHistory` | `generation_history` | prompt, imageUrl, resultData (JSON), status (enum) |
+
+---
+
+## 🚀 Deployment & Live Demo
+
+ChefOne is designed to be deployed as two services — a React frontend and an Express backend — with a persistent PostgreSQL database. Here's the recommended setup using **free tiers**:
+
+### Architecture (Production)
+
+```
+┌─────────────────────────┐     ┌──────────────────────────┐
+│   Vercel / Netlify      │     │   Render / Railway        │
+│                         │     │                           │
+│   React 19 SPA          │────▶│   Node.js + Express       │
+│   (Static Hosting)      │     │   (Web Service)           │
+│                         │     │         │                 │
+└─────────────────────────┘     │         ▼                 │
+                                │   PostgreSQL (Supabase)   │
+                                │   Gemini AI API Calls     │
+                                └──────────────────────────┘
+```
+
+### Step-by-Step Deployment Guide
+
+#### 1. Set Up the Database (Supabase — Free)
+
+[Supabase](https://supabase.com) provides a free PostgreSQL database with persistent storage.
+
+1. Create a [Supabase](https://supabase.com) account → New Project
+2. Go to **Project Settings → Database**
+3. Under "Connection string", copy the **Session pooler** URI (starts with `postgresql://postgres.[ref]:...`)
+4. Replace `[YOUR-PASSWORD]` with the password you set during project creation
+5. Save this as `DATABASE_URL` for the backend deployment
+6. *(Optional)* Enable the "Database Webhooks" or "Edge Functions" if you want real-time features later
+
+#### 2. Deploy the Backend (Render — Free)
+
+[Render](https://render.com) offers free Node.js web service hosting.
+
+1. Go to [Render](https://render.com) → **New → Web Service**
+2. Connect your GitHub repository
+3. Configure the service:
+   - **Name:** `chefone-api`
+   - **Root Directory:** `server`
+   - **Build Command:** `npm install && npx prisma generate && npx prisma db push`
+   - **Start Command:** `npm start`
+   - **Runtime:** Node
+4. Add **Environment Variables** (from your `.env`):
+
+   | Key | Value |
+   |---|---|
+   | `NODE_ENV` | `production` |
+   | `DATABASE_URL` | *(Your Supabase session pooler URI)* |
+   | `JWT_SECRET` | *(Generate: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`)* |
+   | `FRONTEND_URL` | `https://YOUR-VERCEL-APP.vercel.app` *(set after frontend deploy)* |
+   | `GEMINI_API_KEY` | *(Your Google Gemini API key)* |
+
+5. Click **Deploy Web Service**
+6. Note your backend URL: `https://chefone-api.onrender.com`
+
+> **Note:** Render's free tier spins down after 15 minutes of inactivity. The first request "cold starts" in ~30-60 seconds. For a zero-cold-start demo, upgrade to the $7/month tier or use [Railway](https://railway.app) ($5 credit).
+
+#### 3. Deploy the Frontend (Vercel — Free)
+
+[Vercel](https://vercel.com) auto-detects Create React App and deploys in seconds.
+
+1. Go to [Vercel](https://vercel.com) → **New Project**
+2. Import your GitHub repository
+3. Vercel auto-detects **Create React App** — no config needed
+4. Add **Environment Variable**:
+
+   | Key | Value |
+   |---|---|
+   | `REACT_APP_API_URL` | `https://chefone-api.onrender.com/api/v1` |
+
+5. Click **Deploy** — Vercel builds and hosts your app
+6. Note your frontend URL: `https://chefone.vercel.app`
+
+#### 4. Link Frontend & Backend
+
+1. Go back to **Render** → your backend service → **Environment**
+2. Update `FRONTEND_URL` to `https://chefone.vercel.app` (or your actual Vercel URL)
+3. **Redeploy** the backend to apply the CORS change
+4. (Optional) To allow both local dev and production, set: `FRONTEND_URL=http://localhost:3000,https://chefone.vercel.app`
+
+#### 5. Seed the Demo Data
+
+After deployment, SSH into your Render service or run locally pointing to the Supabase DB:
+
+```bash
+cd server
+DATABASE_URL="postgresql://..." npm run db:seed
+```
+
+This populates the demo account (`demo@chefone.app` / `demo1234`) with sample recipes, pantry items, and a multi-dish Vietnamese meal plan.
+
+#### 6. Test the Live Demo
+
+1. Open your Vercel URL: `https://chefone.vercel.app`
+2. No login required in dev mode — the app works immediately
+3. Test: Generate an AI recipe, scan food photos, plan weekly meals
+
+### One-Click Deploy Buttons
+
+> *Coming soon: Add one-click deploy buttons for Render and Vercel to your README. See [Render Deploy to Render](https://render.com/docs/deploy-to-render) and [Vercel Deploy Button](https://vercel.com/docs/deploy-button).*
+
+### Important Deployment Notes
+
+| Topic | Details |
+|---|---|
+| **File Uploads** | Render's filesystem is **ephemeral** — uploaded images are lost on restart. For persistent storage, use [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) (free 10GB) or AWS S3. |
+| **Cold Starts** | Free Render services spin down → first request takes 30-60s. Set up [UptimeRobot](https://uptimerobot.com) (free) to ping every 5 min to keep it alive. |
+| **Database** | Supabase free tier offers 500MB — sufficient for a demo with many users. Back up periodically. |
+| **Gemini API** | Free tier: ~1,500 requests/day. Set a [usage cap](https://console.cloud.google.com/apis) to prevent unexpected charges. |
+| **Environment** | Never commit `.env` files. Use each platform's dashboard to set environment variables. |
 
 ---
 
